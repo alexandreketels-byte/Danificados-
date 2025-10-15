@@ -1,11 +1,14 @@
 let dados = [];
 
-// Carrega o CSV e mostra data de atualização
+// 🔹 Carrega o CSV e mostra data de atualização
 fetch("ENCERRADOS.csv")
   .then(response => {
     const dataArquivo = new Date(response.headers.get("Last-Modified"));
     if (!isNaN(dataArquivo)) {
-      const opcoes = { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" };
+      const opcoes = {
+        day: "2-digit", month: "2-digit", year: "numeric",
+        hour: "2-digit", minute: "2-digit"
+      };
       document.getElementById("ultimaAtualizacao").textContent =
         "Última atualização: " + dataArquivo.toLocaleString("pt-BR", opcoes);
     }
@@ -14,10 +17,14 @@ fetch("ENCERRADOS.csv")
   .then(text => {
     const linhas = text.split("\n").slice(1);
     dados = linhas.map(linha => {
+      // ✅ Divide CSV corretamente (suporta vírgulas entre aspas)
+      const partes = linha.match(/(".*?"|[^",]+)(?=\s*,|\s*$)/g);
+      if (!partes) return {};
+
       const [
         pedido, os, fabricante, status, descricao, cod,
         btus, nf_fabricante, liquidacao, setor, fotos, defeito, alerta
-      ] = linha.split(",");
+      ] = partes.map(v => v.replace(/^"|"$/g, "").trim());
 
       return {
         pedido, os, fabricante, status, descricao, cod,
@@ -26,18 +33,18 @@ fetch("ENCERRADOS.csv")
     });
   });
 
-// Elementos
+// 🔹 Elementos da página
 const tbody = document.querySelector("#results tbody");
 const inputGeral = document.getElementById("searchGeral");
 const sugestoes = document.getElementById("suggestionsGeral");
 const contador = document.getElementById("contadorResultados");
 
-// Remove acentos
+// 🔹 Remove acentos
 function removerAcentos(str) {
   return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 }
 
-// Exibir resultados
+// 🔹 Exibir resultados
 function mostrarResultados(filtrados) {
   const thead = document.querySelector("#results thead");
   const tbody = document.querySelector("#results tbody");
@@ -48,7 +55,7 @@ function mostrarResultados(filtrados) {
   tbody.innerHTML = "";
 
   if (filtrados.length === 0) {
-    tbody.innerHTML = "<tr><td colspan='12'>Nenhum resultado encontrado.</td></tr>";
+    tbody.innerHTML = "<tr><td colspan='13'>Nenhum resultado encontrado.</td></tr>";
     contador.textContent = "";
     return;
   }
@@ -62,7 +69,7 @@ function mostrarResultados(filtrados) {
 
   filtrados.forEach(d => {
     const fotosTexto = d.fotos || "";
-    const fotosFormatado = /sem\s*fot/i.test(fotosTexto)
+    const fotosFormatado = /sem\s*foto/i.test(fotosTexto)
       ? `<span class="sem-foto">${fotosTexto}</span>`
       : fotosTexto;
 
@@ -80,17 +87,15 @@ function mostrarResultados(filtrados) {
       <td>${d.setor || ""}</td>
       <td>${fotosFormatado}</td>
       <td>${d.defeito || ""}</td>
-      <td>
-        ${
-          d.alerta
-            ? /separar/i.test(d.alerta)
-              ? `<span class="separar">${d.alerta}</span>`
-              : /encerrar/i.test(d.alerta)
-                ? `<span class="encerrar">${d.alerta}</span>`
-                : d.alerta
-            : ""
-        }
-      </td>
+      <td>${
+        d.alerta
+          ? /separar/i.test(d.alerta)
+            ? `<span class="separar">${d.alerta}</span>`
+            : /encerrar/i.test(d.alerta)
+              ? `<span class="encerrar">${d.alerta}</span>`
+              : d.alerta
+          : ""
+      }</td>
     `;
     tbody.appendChild(tr);
   });
@@ -98,17 +103,16 @@ function mostrarResultados(filtrados) {
   contador.textContent = `${filtrados.length} registro${filtrados.length > 1 ? "s" : ""} encontrado${filtrados.length > 1 ? "s" : ""}`;
 }
 
-// Busca exata
+// 🔹 Busca exata
 function buscar(termo) {
   const termoNormalizado = removerAcentos(termo.trim().toLowerCase());
-  const filtrados = dados.filter(d => {
-    return Object.values(d)
-      .some(v => removerAcentos(v?.toLowerCase() || "") === termoNormalizado);
-  });
+  const filtrados = dados.filter(d =>
+    Object.values(d).some(v => removerAcentos(v?.toLowerCase() || "") === termoNormalizado)
+  );
   mostrarResultados(filtrados);
 }
 
-// Sugestões
+// 🔹 Sugestões automáticas
 inputGeral.addEventListener("input", () => {
   const termo = inputGeral.value.trim().toLowerCase();
   const termoNormalizado = removerAcentos(termo);
@@ -132,7 +136,7 @@ inputGeral.addEventListener("input", () => {
   });
 });
 
-// Enter → buscar
+// 🔹 Enter → buscar
 inputGeral.addEventListener("keydown", e => {
   if (e.key === "Enter") {
     sugestoes.innerHTML = "";
@@ -140,7 +144,7 @@ inputGeral.addEventListener("keydown", e => {
   }
 });
 
-// Clicar fora → fecha sugestões
+// 🔹 Fecha sugestões ao clicar fora
 document.addEventListener("click", e => {
   if (!sugestoes.contains(e.target) && e.target !== inputGeral) {
     sugestoes.innerHTML = "";
